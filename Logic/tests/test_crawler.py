@@ -48,8 +48,8 @@ expected_fields = {
     "countries_of_origin": List[str],
     "summaries": List[str],
     "synopsis": List[str],
-    "reviews": List[List[str]],
+    "reviews": List[List[str]]
 }
 
-json_file_path = "../IMDB_Crawled.json"
+json_file_path = "C:\\Users\mehdi\IMDB-MIR\Logic\core\IMDB_crawled.json"
 check_field_types(json_file_path, expected_fields)
