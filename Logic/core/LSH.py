@@ -1,6 +1,7 @@
-import numpy as np
 import itertools
 import random
+from collections import defaultdict
+import numpy as np
 
 
 class MinHashLSH:
@@ -17,6 +18,8 @@ class MinHashLSH:
         """
         self.documents = documents
         self.num_hashes = num_hashes
+        self.shingles = [self.shingle_document(document) for document in self.documents]
+        self.hash_funcs = [lambda x: hash((10 ** 9 + 9, i, x)) for i in range(num_hashes)]
 
     def shingle_document(self, document, k=2):
         """
@@ -34,8 +37,8 @@ class MinHashLSH:
         set
             A set of shingles.
         """
-        shingles = None
-        return shingles
+        words = document.split()
+        return set(" ".join(words[i: i + k]) for i in range(len(words) - k + 1))
 
     def build_characteristic_matrix(self):
         """
@@ -46,8 +49,18 @@ class MinHashLSH:
         numpy.ndarray
             The binary characteristic matrix.
         """
-        # TODO
-        return
+        shingle_set = set(shingle for doc_shingles in self.shingles for shingle in doc_shingles)
+
+        matrix = np.zeros((len(shingle_set), len(self.shingles)))
+
+        unique_shingles = list(shingle_set)
+
+        for i, shingle in enumerate(unique_shingles):
+            for j, doc_shingles in enumerate(self.shingles):
+                if shingle in doc_shingles:
+                    matrix[i, j] = 1
+
+        return matrix
 
     def min_hash_signature(self):
         """
@@ -58,16 +71,19 @@ class MinHashLSH:
         numpy.ndarray
             The Min-Hash signatures matrix.
         """
-        # TODO
-        return
+        hashes = []
+        for doc in self.documents:
+            hash_values = [min(map(hash_func, self.shingle_document(doc))) for hash_func in self.hash_funcs]
+            hashes.append(np.array(hash_values))
+        return hashes
 
-    def lsh_buckets(self, signature, bands=10, rows_per_band=10):
+    def lsh_buckets(self, signatures: np.ndarray, bands=10, rows_per_band=10):
         """
         Group documents into Locality-Sensitive Hashing (LSH) buckets based on Min-Hash signatures.
 
         Parameters
         ----------
-        signature : numpy.ndarray
+        signatures : numpy.ndarray
             Min-Hash signatures for documents.
         bands : int
             Number of bands for LSH.
@@ -79,8 +95,12 @@ class MinHashLSH:
         dict
             A dictionary mapping bucket IDs to lists of document indices.
         """
-        # TODO
-        return
+        buckets = defaultdict(list)
+        for i, sig in enumerate(signatures):
+            for band in range(bands):
+                band_hash = hash(tuple(sig[band * rows_per_band: (band + 1) * rows_per_band]))
+                buckets[band_hash].append(i)
+        return buckets
 
     def perform_lsh(self):
         """
@@ -91,8 +111,9 @@ class MinHashLSH:
         dict
             A dictionary mapping bucket IDs to lists of document indices.
         """
-        # TODO
-        return
+        bands = self.num_hashes // 5
+        signatures = self.min_hash_signature()
+        return self.lsh_buckets(signatures, bands, 5)
 
     def jaccard_score(self, first_set, second_set):
         """
@@ -110,8 +131,10 @@ class MinHashLSH:
         float
             Jaccard score.
         """
-        # TODO
-        pass
+        intersection_size = len(first_set & second_set)
+        union_size = len(first_set | second_set)
+        jaccard_score = intersection_size / union_size if union_size != 0 else 0
+        return jaccard_score
 
     def jaccard_similarity_test(self, buckets, all_documents):
         """
@@ -160,3 +183,13 @@ class MinHashLSH:
 
         # a good score is around 0.8
         print("your final score in near duplicate detection:", correct_near_duplicates / all_near_duplicates)
+
+
+if __name__ == "__main__":
+    import json
+
+    with open("LSHFakeData.json", "r") as f:
+        documents = json.load(f)
+    document_summaries = [" # ".join(doc["summaries"]) for doc in documents]
+    minhash_lsh = MinHashLSH(document_summaries, 500)
+    minhash_lsh.jaccard_similarity_test(minhash_lsh.perform_lsh(), document_summaries)
