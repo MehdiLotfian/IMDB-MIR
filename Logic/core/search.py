@@ -150,6 +150,34 @@ class SearchEngine:
             else:
                 scores[field] = scorer.compute_scores_with_vector_space_model(query, method)
 
+    def find_scores_with_unigram_model(
+            self, query, smoothing_method, weights, scores, alpha=0.5, lamda=0.5
+    ):
+        """
+        Calculates the scores for each document based on the unigram model.
+
+        Parameters
+        ----------
+        query : str
+            The query to search for.
+        smoothing_method : str (bayes | naive | mixture)
+            The method used for smoothing the probabilities in the unigram model.
+        weights : dict
+            A dictionary mapping each field (e.g., 'stars', 'genres', 'summaries') to its weight in the final score. Fields with a weight of 0 are ignored.
+        scores : dict
+            The scores of the documents.
+        alpha : float, optional
+            The parameter used in bayesian smoothing method. Defaults to 0.5.
+        lambda : float, optional
+            The parameter used in some smoothing methods to balance between the document
+            probability and the collection probability. Defaults to 0.5.
+        """
+        for field in weights.keys():
+            scorer = Scorer(self.document_indexes[field].index, len(self.document_lengths_index[field].index))
+            scores[field] = scorer.compute_scores_with_unigram_model(query, smoothing_method,
+                                                                     self.document_lengths_index[field].index, alpha,
+                                                                     lamda)
+
     def merge_scores(self, scores1, scores2):
         """
         Merges two dictionaries of scores.
