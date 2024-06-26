@@ -53,7 +53,7 @@ class BERTFinetuner:
         def get_matching_genre(genres):
             return next(genre for genre in genres if genre in top_genres)
 
-        self.df['label'] = self.df['genres'].apply(get_matching_genre)
+        self.df['label'] = LabelEncoder().fit_transform(self.df['genres'].apply(get_matching_genre))
 
     def split_dataset(self, test_size=0.3, val_size=0.5):
         """
